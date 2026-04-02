@@ -7,11 +7,12 @@ from pathlib import Path
 import re
 import logging
 from subprocess import SubprocessError
+from time import sleep
 
 logger = logging.getLogger(__name__)
 
 
-class IVBoxManage:
+class VBoxManage:
 
     supported_extensions = ["vdi", "vmdk"]
     vm_name = "exciting_sugar"
@@ -19,6 +20,7 @@ class IVBoxManage:
     vm_cpu = 1
     bridge_host_interface = "tap0"
     storage_controller_name = "SATA"
+    stop_cooldown = 3
 
     def __init__(self, disk_image_path, vboxm_binary_path="/usr/bin/vboxmanage", base_folder="vm"):
         # attributes declaration
@@ -60,7 +62,7 @@ class IVBoxManage:
     def vm_exist(self):
         result = subprocess.run([self.vboxm_binary_path, "list", "vms"], stdout=subprocess.PIPE)
         if result.returncode != 0:
-            logger.error(f"coudl not verify if vm {IVBoxManage.vm_name} exists")
+            logger.error(f"coudl not verify if vm {VBoxManage.vm_name} exists")
             raise SubprocessError(result.stdout)
         match = re.search(r'"exciting_sugar" \{([a-z0-9\-]+)\}', result.stdout.decode("utf-8"))
         if match is None:
@@ -81,7 +83,7 @@ class IVBoxManage:
         if result.returncode != 0:
             logger.error(f"could not showvminfo {self.disk_image.stem}")
             raise SubprocessError(result.stderr)
-        if result.stdout.decode("utf-8").find(f"{IVBoxManage.storage_controller_name}-0-0") != -1:
+        if result.stdout.decode("utf-8").find(f"{VBoxManage.storage_controller_name}-0-0") != -1:
             return True
         return False
 
@@ -90,7 +92,7 @@ class IVBoxManage:
         cmd = [
             self.vboxm_binary_path,
             "createvm",
-            f"--name={IVBoxManage.vm_name}",
+            f"--name={VBoxManage.vm_name}",
             f"--basefolder={str(self.base_folder.absolute())}",
             f"--uuid={self.vm_uuid}",
             f"--os-types=Linux_64",
@@ -137,7 +139,7 @@ class IVBoxManage:
             self.vm_uuid,
             "--type=hdd",
             f"--medium={str(self.disk_image.absolute())}",
-            f"--storagectl={IVBoxManage.storage_controller_name}",
+            f"--storagectl={VBoxManage.storage_controller_name}",
             "--port=0",
             "--device=0"
         ]
@@ -160,12 +162,12 @@ class IVBoxManage:
             "modifyvm",
             self.vm_uuid,
             f"--os-type=Linux_64",
-            f"--memory={IVBoxManage.vm_memory_size}",
-            f"--cpus={IVBoxManage.vm_cpu}",
+            f"--memory={VBoxManage.vm_memory_size}",
+            f"--cpus={VBoxManage.vm_cpu}",
             "--cpu-profile=host",
             "--boot1=disk",
             "--nic1=bridged",
-            f"--bridge-adapter1={IVBoxManage.bridge_host_interface}",
+            f"--bridge-adapter1={VBoxManage.bridge_host_interface}",
             "--audio-enabled=off",
             "--audio-in=off",
             "--vram=16",
@@ -181,6 +183,24 @@ class IVBoxManage:
         self.create_storage()
         self.attach_storage()
         logger.info(f"successfully created vm {self.disk_image.stem} {self.vm_uuid}")
+
+    def is_running(self):
+        if self.vm_uuid is None:
+            raise ValueError("vm_uuid is not defined")
+        cmd = [
+            self.vboxm_binary_path,
+            "list",
+            "runningvms"
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE)
+        if result.returncode != 0:
+            logger.error(f"could not startvm {self.disk_image.stem}")
+            raise SubprocessError(result.stderr)
+        logger.info(f"successfully query vm status {self.disk_image.stem}")
+        if self.vm_uuid in result.stdout:
+            return True
+        return False
+        logger.info(f"successfully started vm {self.disk_image.stem}")
 
     def start_vm(self):
         if self.vm_uuid is None:
@@ -210,4 +230,6 @@ class IVBoxManage:
         if result.returncode != 0:
             logger.error(f"could not controlvm {self.disk_image.stem}")
             raise SubprocessError(result.stderr)
+        logger.info(f"waiting for vm status update, sleeping for {VBoxManage.sleep_cooldown}s")
+        sleep(VBoxManage.sleep_cooldown)
         logger.info(f"successfully stopped vm {self.disk_image.stem}")

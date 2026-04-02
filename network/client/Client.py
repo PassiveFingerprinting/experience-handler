@@ -1,8 +1,8 @@
 import logging
 
-from transport.TcpClient import TcpClient
-from protocol.Protocol import Protocol
-from protocol.Message import Message, MessageType
+from network.transport.TcpClient import TcpClient
+from network.protocol.Protocol import Protocol
+from network.protocol import Message, MessageType
 
 
 logger = logging.getLogger(__name__)

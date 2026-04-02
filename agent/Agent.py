@@ -1,6 +1,6 @@
 import logging
 import platform
-from client.Client import Client
+from network.client.Client import Client
 from cmds.Commands import Command
 
 

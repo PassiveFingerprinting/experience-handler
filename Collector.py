@@ -14,7 +14,7 @@ class PcapSetting(Enum):
 
 class Collector:
 
-    def __init__(self, output_path, interface="tap0", pcap_setting="erase"):
+    def __init__(self, output_path=None, interface="tap0", pcap_setting="erase"):
         self.output_path = output_path
         self.interface = interface
         self.running = False

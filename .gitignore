@@ -3,3 +3,4 @@ vm/
 *.pcap
 venv/
 __pycache__
+.idea

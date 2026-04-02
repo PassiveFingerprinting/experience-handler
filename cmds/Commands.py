@@ -1,5 +1,6 @@
 from enum import Enum
 
 
-class Command(Enum):
+class CommandType(Enum):
     SYSTEM_INFO = "SYSTEM_INFO"
+    SHUTDOWN = "SHUTDOWN"
