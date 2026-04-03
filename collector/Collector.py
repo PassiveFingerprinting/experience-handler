@@ -49,11 +49,6 @@ class Collector:
                 raise e
             logger.info(f'[Collector]: old {self.output_path} file removed')
 
-    def _capture(self):
-        packets = sniff(iface=self.interface, count=0, stop_filter=lambda x: self.ask_to_stop)
-        logger.info(f'[_capture]: writing packets to pcap file {self.output_path}')
-        wrpcap(self.output_path, packets)
-
     # TODO: make the call to stderr stream non blocking to suspend function call in case of tiemout
     def start(self):
         logger.info('[Collector]: Starting collector')
