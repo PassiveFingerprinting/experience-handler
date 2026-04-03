@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 
-from Orchestrator import Orchestrator
+from orchestrator import Orchestrator
 
 
 logger = logging.getLogger(__name__)

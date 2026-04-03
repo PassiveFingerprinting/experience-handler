@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 import signal
 
-from Collector import Collector
+from collector import Collector
 from network import Server
 from cmds import CommandType
 from vbox import VBoxManage
