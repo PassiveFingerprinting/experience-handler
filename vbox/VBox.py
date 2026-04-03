@@ -192,7 +192,7 @@ class VBoxManage:
             "list",
             "runningvms"
         ]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
         if result.returncode != 0:
             logger.error(f"could not startvm {self.disk_image.stem}")
             raise SubprocessError(result.stderr)
@@ -201,7 +201,7 @@ class VBoxManage:
             return True
         return False
         logger.info(f"successfully started vm {self.disk_image.stem}")
-
+    
     def start_vm(self):
         if self.vm_uuid is None:
             raise ValueError("vm_uuid is not defined")
@@ -230,6 +230,6 @@ class VBoxManage:
         if result.returncode != 0:
             logger.error(f"could not controlvm {self.disk_image.stem}")
             raise SubprocessError(result.stderr)
-        logger.info(f"waiting for vm status update, sleeping for {VBoxManage.sleep_cooldown}s")
-        sleep(VBoxManage.sleep_cooldown)
+        logger.info(f"waiting for vm status update, sleeping for {VBoxManage.stop_cooldown}s")
+        sleep(VBoxManage.stop_cooldown)
         logger.info(f"successfully stopped vm {self.disk_image.stem}")

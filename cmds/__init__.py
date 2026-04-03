@@ -1,1 +1,1 @@
-from Commands import CommandType
+from .Commands import CommandType

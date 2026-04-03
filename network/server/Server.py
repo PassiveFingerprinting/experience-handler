@@ -1,9 +1,8 @@
 import logging
 import threading
 
-from network.transport.TcpServer import TcpServer
-from network.protocol.Protocol import Protocol
-from network.protocol import Message, MessageType
+from network.transport import TcpServer
+from network.protocol import Protocol, Message, MessageType
 
 
 logger = logging.getLogger(__name__)

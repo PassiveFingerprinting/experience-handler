@@ -22,8 +22,8 @@ class Orchestrator:
 
     def __init__(self, images, pcap_dir="pcaps"):
         self.images = images
-        self.server = Server("192.168.100.1", 5573)
-        self.collector = Collector(self.server)
+        self.server = Server("127.0.0.1", 5573)
+        self.collector = Collector()
         self.vm = None
         self.running_exp = None
         self.pcap_dir = Path(pcap_dir)
@@ -35,7 +35,7 @@ class Orchestrator:
             self.pcap_dir.mkdir(parents=True, exist_ok=True)
         signal.signal(signal.SIGINT, self.sigint_handler)
 
-    def sigint_handler(self, _, _)
+    def sigint_handler(self, _, __):
         logger.info("received SIGINT signal")
         self.stop()
 
@@ -45,7 +45,7 @@ class Orchestrator:
     def cmd_handler(self, data):
         logger.debug(data)
 
-    def send_agent(self):
+    # def send_agent(self):
          
 
     def start(self):
@@ -61,7 +61,8 @@ class Orchestrator:
             self.vm = VBoxManage(image)
             self.vm.create_vm()
             self.vm.start_vm()
-            self.collector.start()
+            if self.collector.start() is False:
+                break
         self.stop()
 
     def stop(self):
@@ -69,5 +70,5 @@ class Orchestrator:
         self.collector.stop()
         if self.vm:
             if self.vm.is_running():
-                self.vm.stop()
+                self.vm.stop_vm()
 

@@ -1,1 +1,1 @@
-from VBox import VBoxManage
+from .VBox import VBoxManage

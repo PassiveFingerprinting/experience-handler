@@ -4,3 +4,4 @@ vm/
 venv/
 __pycache__
 .idea
+test.py

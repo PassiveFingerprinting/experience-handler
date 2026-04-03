@@ -2,6 +2,8 @@ from enum import Enum
 import logging
 import os
 import threading
+import subprocess
+from datetime import datetime, timedelta
 from scapy.all import sniff, wrpcap
 
 logger = logging.getLogger(__name__)
@@ -14,13 +16,16 @@ class PcapSetting(Enum):
 
 class Collector:
 
+    PKEXEC_TIMEOUT = 20 # in seconds
+
     def __init__(self, output_path=None, interface="tap0", pcap_setting="erase"):
         self.output_path = output_path
         self.interface = interface
         self.running = False
         self.sniffer = None
-        self.thread = None
-        self.ask_to_stop = False
+        # self.thread = None
+        # self.ask_to_stop = False
+        self.tcpdump = None
         if pcap_setting not in PcapSetting.__members__:
             logger.error('[Collector]: PcapSetting not recognized')
             raise ValueError(pcap_setting)
@@ -49,17 +54,23 @@ class Collector:
         logger.info(f'[_capture]: writing packets to pcap file {self.output_path}')
         wrpcap(self.output_path, packets)
 
+    # TODO: make the call to stderr stream non blocking to suspend function call in case of tiemout
     def start(self):
         logger.info('[Collector]: Starting collector')
         self.handle_pcap_setting()
-        self.ask_to_stop = False
-        self.thread = threading.Thread(target=self._capture, daemon=True)
-        self.thread.start()
-        self.running = True
-        logger.info('[Collector]: Collector started')
+        logger.info("[Collector]: Capturing tap0 with tcpdump")
+        self.tcpdump = subprocess.Popen(["pkexec", "tcpdump", "-i", "tap0", "-w", self.output_path], stderr=subprocess.PIPE, text=True)
+        start_time = datetime.now()
+        while datetime.now() < start_time + timedelta(seconds=Collector.PKEXEC_TIMEOUT):
+            for line in self.tcpdump.stderr:
+                if "tcpdump:" in line:
+                    logger.info('[Collector]: Successfully started collector')
+                    self.running = True
+        logger.error('[Collector]: pkexec timeout expired')
+        return False
 
     def stop(self):
         logger.info('[Collector]: Stopping collector')
-        self.ask_to_stop = True
-        self.thread.join()
+        if self.tcpdump is not None:
+            self.tcpdump.terminate()
         logger.info('[Collector]: Collector stopped')
