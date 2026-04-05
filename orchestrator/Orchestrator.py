@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 import signal
+import subprocess
+import socket
+import time
 
 from collector import Collector
 from network import Server
@@ -20,9 +23,17 @@ class Experience:
 
 class Orchestrator:
 
+    SSH_PASS = "osboxes.org"
+    SSH_USER = "osboxes"
+    REMOTE_AGENT_FOLDER = "/home/osboxes/agent"
+    VM_IP = "192.168.100.2"
+    SERVER_ADDRESS = "192.168.100.1"
+    SERVER_PORT = 5573
+    SSH_WAKEUP_TIMEOUT = 120 # in seconds
+
     def __init__(self, images, pcap_dir="pcaps"):
         self.images = images
-        self.server = Server("127.0.0.1", 5573)
+        self.server = Server(Orchestrator.SERVER_ADDRESS, Orchestrator.SERVER_PORT)
         self.collector = Collector()
         self.vm = None
         self.running_exp = None
@@ -45,8 +56,58 @@ class Orchestrator:
     def cmd_handler(self, data):
         logger.debug(data)
 
-    # def send_agent(self):
-         
+    def _ssh_is_up(self, timeout=120):
+        """Checks if the SSH port is open and accepting connections."""
+        logger.info("[Orchestrator]: checking if ssh port is open")
+        start_time = time.perf_counter()
+        while True:
+            try:
+                with socket.create_connection((Orchestrator.VM_IP, 22), timeout=1):
+                    return True
+            except (OSError, ConnectionRefusedError):
+                if time.perf_counter() - start_time > timeout:
+                    raise TimeoutError(f"Port {port} on {host} did not open within {timeout}s")
+                time.sleep(1)
+
+    def send_agent(self):
+        logger.debug("[Orchestrator]: sending agent")
+        if self._ssh_is_up() is False:
+            logger.error("[Orchestrator]: could not access vm ssh service")
+            return False
+        logger.info("[Orchestrator]: remote ssh service is online")
+        cmd = [
+            "sshpass",
+            "-p",
+            f"{Orchestrator.SSH_PASS}",
+            "rsync",
+            "--progress",
+            "-av", 
+            "--files-from=agent_files.txt",
+            ".", 
+            f"{Orchestrator.SSH_USER}@{Orchestrator.VM_IP}:{Orchestrator.REMOTE_AGENT_FOLDER}"
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            logger.error(f"could not rsync agent sources files to vm")
+            raise subprocess.SubprocessError(result.stderr)
+        logger.info('[Orchestrator]: agent source files successfully sent')
+        return True
+
+    def run_agent(self):
+        cmd = [
+            "sshpass",
+            "-p",
+            f"{Orchestrator.SSH_PASS}",
+            "ssh",
+            f"{Orchestrator.SSH_USER}@{Orchestrator.VM_IP}",
+            f"cd {Orchestrator.REMOTE_AGENT_FOLDER}; python3 agent.py {Orchestrator.SERVER_ADDRESS} {Orchestrator.SERVER_PORT}"
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode != 0:
+            logger.error(f"[Orchestrator]: could not run agent in vm")
+            raise subprocess.SubprocessError(result.stderr)
+        logger.info('[Orchestrator]: successfully ran agent')
+        return True
 
     def start(self):
         self.server.start(self.cmd_handler, on_connection=self.on_connect)
@@ -63,6 +124,9 @@ class Orchestrator:
             self.vm.start_vm()
             if self.collector.start() is False:
                 break
+            if self.send_agent() is False:
+                break
+            self.run_agent()
         self.stop()
 
     def stop(self):

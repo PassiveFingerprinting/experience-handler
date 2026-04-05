@@ -4,7 +4,6 @@ import os
 import threading
 import subprocess
 from datetime import datetime, timedelta
-from scapy.all import sniff, wrpcap
 
 logger = logging.getLogger(__name__)
 
@@ -61,11 +60,12 @@ class Collector:
                 if "tcpdump:" in line:
                     logger.info('[Collector]: Successfully started collector')
                     self.running = True
+                    return True
         logger.error('[Collector]: pkexec timeout expired')
         return False
 
     def stop(self):
         logger.info('[Collector]: Stopping collector')
         if self.tcpdump is not None:
-            self.tcpdump.terminate()
+            self.tcpdump = subprocess.Popen(["pkexec", "kill", str(self.tcpdump.pid)], stderr=subprocess.PIPE, text=True)
         logger.info('[Collector]: Collector stopped')

@@ -124,7 +124,6 @@ class VBoxManage:
         ]
         logger.debug(f"storagectl command: {cmd}")
         result = subprocess.run(cmd, stdout=subprocess.PIPE)
-        print(result.stdout)
         if result.returncode != 0:
             logger.error(f"could not storagectl {self.disk_image.stem}")
             raise SubprocessError(result.stderr)

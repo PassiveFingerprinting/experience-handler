@@ -1,7 +1,7 @@
 import logging
 import platform
 from network.client.Client import Client
-from cmds.Commands import Command
+from cmds import CommandType
 
 
 logger = logging.getLogger(__name__)
@@ -10,16 +10,16 @@ logger = logging.getLogger(__name__)
 class Agent:
 
     def __init__(self, host, port):
-        self.client = Client(host, port)
+        self.client = Client(host, int(port))
         self.cmds = {
-            str(Command.SYSTEM_INFO): self.cmd_info,
+            str(CommandType.SYSTEM_INFO): self.cmd_info,
         }
 
     def cmd_info(self, _):
         logger.info(f'cmd info received')
         system_info = platform.uname()
         self.client.send_message({
-            "cmd": str(Command.SYSTEM_INFO),
+            "cmd": str(CommandType.SYSTEM_INFO),
             "result": {
                 "release": system_info.release,
                 "version": system_info.version,
@@ -27,16 +27,16 @@ class Agent:
             }
         })
 
-    def handle_commands(self, cmd):
+    def handle_cmds(self, cmd):
         if 'cmd' in cmd:
             if cmd["cmd"] in self.cmds:
                 self.cmds[cmd["cmd"]](cmd["data"])
             else:
-                logger.info(f'Command {cmd["cmd"]} not recognized')
+                logger.info(f'CommandType {cmd["cmd"]} not recognized')
 
     def start(self):
         logger.info(f'Agent starting')
-        self.client.start(self.handle_commands)
+        self.client.start(self.handle_cmds)
 
     def stop(self):
         logger.info(f'Agent stopping')

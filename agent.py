@@ -1,7 +1,9 @@
 import argparse
 import logging
 import sys
-from agent.Agent import Agent
+import signal
+
+from agent import Agent
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +19,7 @@ if __name__=='__main__':
     description="A python agent to connect to experience server"
     )
     parser.add_argument("host",
-                        help="Experience host address to connect to",
+                        help="Experience server address to connect to",
                         default="192.168.100.1"
                         )
     parser.add_argument("port",
@@ -26,5 +28,4 @@ if __name__=='__main__':
                         )
     args = parser.parse_args(sys.argv[1:])
     logging.basicConfig(level=logging.DEBUG)
-    signal.signal(signal.SIGINT, signal_handler)
-    main(args.images)
+    main(args.host, args.port)
