@@ -12,8 +12,15 @@ class Agent:
     def __init__(self, host, port):
         self.client = Client(host, int(port))
         self.cmds = {
+            str(CommandType.DONE): self.cmd_done,
             str(CommandType.SYSTEM_INFO): self.cmd_info,
         }
+
+    def cmd_done(self, _):
+        self.client.send_message({
+            "cmd": str(CommandType.DONE),
+            "result": {}
+        })
 
     def cmd_info(self, _):
         logger.info(f'cmd info received')

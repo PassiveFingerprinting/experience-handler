@@ -15,15 +15,13 @@ class PcapSetting(Enum):
 
 class Collector:
 
-    PKEXEC_TIMEOUT = 20 # in seconds
+    # has to be run with sudo privilege
 
     def __init__(self, output_path=None, interface="tap0", pcap_setting="erase"):
         self.output_path = output_path
         self.interface = interface
         self.running = False
         self.sniffer = None
-        # self.thread = None
-        # self.ask_to_stop = False
         self.tcpdump = None
         if pcap_setting not in PcapSetting.__members__:
             logger.error('[Collector]: PcapSetting not recognized')
@@ -53,19 +51,25 @@ class Collector:
         logger.info('[Collector]: Starting collector')
         self.handle_pcap_setting()
         logger.info("[Collector]: Capturing tap0 with tcpdump")
-        self.tcpdump = subprocess.Popen(["pkexec", "tcpdump", "-i", "tap0", "-w", self.output_path], stderr=subprocess.PIPE, text=True)
-        start_time = datetime.now()
-        while datetime.now() < start_time + timedelta(seconds=Collector.PKEXEC_TIMEOUT):
-            for line in self.tcpdump.stderr:
-                if "tcpdump:" in line:
-                    logger.info('[Collector]: Successfully started collector')
-                    self.running = True
-                    return True
-        logger.error('[Collector]: pkexec timeout expired')
-        return False
+        logger.info(f"[Collector]: Output path at: {self.output_path}")
+        try:
+            self.tcpdump = subprocess.Popen([
+                "tcpdump", 
+                "-i", 
+                "tap0", 
+                "-w", 
+                self.output_path
+                ]
+                , stdin=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        except subprocess.SubprocessError as err:
+            logger.error('could not start tcpdump process')
+            raise SubprocessError            
+        logger.info('[Collector]: Successfully started collector')
+        self.running = True
+        return True
 
     def stop(self):
         logger.info('[Collector]: Stopping collector')
         if self.tcpdump is not None:
-            self.tcpdump = subprocess.Popen(["pkexec", "kill", str(self.tcpdump.pid)], stderr=subprocess.PIPE, text=True)
+            self.tcpdump.terminate()
         logger.info('[Collector]: Collector stopped')

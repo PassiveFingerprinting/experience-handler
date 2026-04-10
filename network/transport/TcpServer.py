@@ -29,7 +29,7 @@ class TcpServer:
         if conn is None:
             return None
         conn.settimeout(0.5)
-        logger.info(f"New connection from: {addr}")
+        logger.debug(f"New connection from: {addr}")
         return TcpConnection(conn)
 
     def close(self):

@@ -3,4 +3,4 @@ from enum import Enum
 
 class CommandType(Enum):
     SYSTEM_INFO = "SYSTEM_INFO"
-    SHUTDOWN = "SHUTDOWN"
+    DONE = "DONE"

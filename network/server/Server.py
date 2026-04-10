@@ -7,7 +7,6 @@ from network.protocol import Protocol, Message, MessageType
 
 logger = logging.getLogger(__name__)
 
-
 class Server:
 
     def __init__(self, host, port):
@@ -26,11 +25,13 @@ class Server:
         if self.conn is None:
             return
         if self.on_connection is not None:
-            self.on_connection(self)
+            self.on_connection.set()
         while self.run:
             try:
                 data = self.conn.recv()
             except TimeoutError:
+                break
+            except OSError:
                 break
             if not data:
                 break
@@ -43,7 +44,7 @@ class Server:
     def start(self, command_handler, on_connection=None):
         if not callable(command_handler):
             raise TypeError("Command handler must be callable")
-        if on_connection is not None and not callable(on_connection):
+        if on_connection is not None and not isinstance(on_connection, threading.Event):
             raise TypeError("on_connection handler must be callable")
         self.command_handler = command_handler
         self.on_connection = on_connection
@@ -51,7 +52,7 @@ class Server:
         self.loop_thread.start()
 
     def stop(self):
-        logger.info(f'Stopping server')
+        logger.info("Stopping server")
         self.run = False
         self.server.close()
         if self.conn is not None:
