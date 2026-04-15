@@ -17,6 +17,8 @@ class Collector:
 
     # has to be run with sudo privilege
 
+    PROCESS_CHECK_TIMEOUT = 1 # seconds
+
     def __init__(self, output_path=None, interface="tap0", pcap_setting="erase"):
         self.output_path = output_path
         self.interface = interface
@@ -54,16 +56,17 @@ class Collector:
         logger.info(f"[Collector]: Output path at: {self.output_path}")
         try:
             self.tcpdump = subprocess.Popen([
-                "tcpdump", 
+                "sudo",
+                "/usr/bin/tcpdump",
                 "-i", 
                 "tap0", 
-                "-w", 
+                "-w",
                 self.output_path
                 ]
-                , stdin=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                , stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         except subprocess.SubprocessError as err:
             logger.error('could not start tcpdump process')
-            raise SubprocessError            
+            raise SubprocessError               
         logger.info('[Collector]: Successfully started collector')
         self.running = True
         return True

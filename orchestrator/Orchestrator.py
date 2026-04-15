@@ -20,6 +20,10 @@ class Experience:
     local_exp_id: str
     pcap_exp_path: str
     univ_exp_id: str | None = None
+    kernel_version: str | None = None
+    kernel_system: str | None = None
+    kernel_release: str | None = None
+    machine: str | None = None
 
 
 class Orchestrator:
@@ -137,7 +141,7 @@ class Orchestrator:
         self.server.start(self.cmd_handler, on_connection=self.on_connect)
         for image in self.images:
             local_exp_id = uuid4().hex
-            pcap_path = str(self.pcap_dir.with_name(f"{local_exp_id}.pcap"))
+            pcap_path = str(self.pcap_dir / f"{local_exp_id}.pcap")
             self.running_exp = Experience(
                 local_exp_id=local_exp_id,
                 pcap_exp_path=pcap_path

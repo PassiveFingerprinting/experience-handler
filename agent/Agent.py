@@ -28,6 +28,7 @@ class Agent:
         self.client.send_message({
             "cmd": str(CommandType.SYSTEM_INFO),
             "result": {
+                "system": system_info.system,
                 "release": system_info.release,
                 "version": system_info.version,
                 "machine": system_info.machine
