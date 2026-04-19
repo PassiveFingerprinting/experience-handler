@@ -104,6 +104,8 @@ class Orchestrator:
             "-p",
             f"{Orchestrator.SSH_PASS}",
             "rsync",
+            "-e",
+            "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
             "--progress",
             "-av", 
             "--files-from=agent_files.txt",
