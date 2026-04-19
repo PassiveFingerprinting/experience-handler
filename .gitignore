@@ -1,7 +1,10 @@
 vm/
 .python-version
 *.pcap
+*.zip
+*.json
 venv/
 __pycache__
 .idea
 test.py
+results
