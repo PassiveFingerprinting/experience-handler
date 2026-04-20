@@ -125,6 +125,10 @@ class Orchestrator:
             "-p",
             f"{Orchestrator.SSH_PASS}",
             "ssh",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
             f"{Orchestrator.SSH_USER}@{Orchestrator.VM_IP}",
             f"cd {Orchestrator.REMOTE_AGENT_FOLDER}; python3 agent.py {Orchestrator.SERVER_ADDRESS} {Orchestrator.SERVER_PORT}"
         ]
