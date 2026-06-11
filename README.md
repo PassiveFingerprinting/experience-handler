@@ -62,3 +62,5 @@ And finaly run the experience by passing the path to your virtual image to exper
 `
 python3 experience.py <path to your virtual image.vdi>
 `
+
+## The result archive

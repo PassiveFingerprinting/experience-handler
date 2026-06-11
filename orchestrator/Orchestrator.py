@@ -45,6 +45,18 @@ class Orchestrator:
     DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
     def __init__(self, images, results_dir="results"):
+        """Orchestrator constructor.
+
+        Args:
+            images (list[str]): list of path to prebuilt images to be tested.
+            results_dir (str): path to the results directory
+
+        Returns:
+            none
+
+        Raises:
+            NotADirectoryError: If results_dir is not a directory
+        """
         self.images = images
         self.server = Server(Orchestrator.SERVER_ADDRESS, Orchestrator.SERVER_PORT)
         # events declaration
@@ -61,17 +73,39 @@ class Orchestrator:
         # making sure pcap and results dir exist
         if self.results_dir.exists():
             if not self.results_dir.is_dir():
-                raise FileExistsError(f"{self.results_dir} is not a directory")
+                raise NotADirectoryError(f"{self.results_dir} is not a directory")
         else:
             logger.info(f"creating results directory at {self.results_dir}")
             self.results_dir.mkdir(parents=True, exist_ok=True)
         signal.signal(signal.SIGINT, self.sigint_handler)
 
     def sigint_handler(self, _, __):
+        """Function used to catch SIGINT signal and stop the experience.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            none
+        """
         logger.info("received SIGINT signal")
         self.stop()
 
     def cmd_handler(self, data):
+        """Handle commands received via network.
+
+        Args:
+            data (dict): The data received from a client.
+
+        Returns:
+            none
+
+        Raises:
+            none
+        """
         logger.info(f"received command: {data}")
         if data["cmd"] == str(CommandType.DONE):
             self.playbook_done.set()
@@ -82,7 +116,17 @@ class Orchestrator:
             self.running_exp.machine = data["result"]["machine"]
 
     def _ssh_is_up(self, timeout=120):
-        """Checks if the SSH port is open and accepting connections."""
+        """Checks if the SSH port is open and accepting connections.
+
+        Args:
+            timeout (int): The maximum time in seconds to wait for the remote host port to open.
+
+        Returns:
+            none
+
+        Raises:
+            TimeoutError: If the remote host did not respond within timeout seconds.
+        """
         logger.info("[Orchestrator]: checking if ssh port is open")
         start_time = time.perf_counter()
         while True:
@@ -94,6 +138,17 @@ class Orchestrator:
                     raise TimeoutError(f"Port {port} on {host} did not open within {timeout}s")
 
     def send_agent(self):
+        """Send the agent to the vm via ssh.
+
+        Args:
+            none
+
+        Returns:
+            Bool: True if the agent has been successfully sent, False otherwise.
+
+        Raises:
+            SubprocessError: If the subprocess failed
+        """
         logger.debug("[Orchestrator]: sending agent")
         if self._ssh_is_up() is False:
             logger.error("[Orchestrator]: could not access vm ssh service")
@@ -120,6 +175,17 @@ class Orchestrator:
         return True
 
     def run_agent(self):
+        """Run the agent from within the vm via ssh.
+
+        Args:
+            none
+
+        Returns:
+            Bool: Returns True if the agent is successfully running, False otherwise.
+
+        Raises:
+            SubprocessError: If the subprocess failed
+        """
         cmd = [
             "sshpass",
             "-p",
@@ -142,13 +208,26 @@ class Orchestrator:
         return True
 
     def run_playbook(self):
+        """Run the playbook from within the vm. The playbook is defined in this function.
+
+        Args:
+            none
+
+        Returns:
+            Bool: Returns True if the playbook has been runne successfully, False otherwise.
+
+        Raises:
+            none
+        """
         logger.info('running playbook')
         if self.on_connect.wait(timeout=Orchestrator.PLAYBOOK_TIMEOUT) is False:
             logger.error("could run playbook because agent did not connect to server")
             return False
         logger.info('sending INFO cmd')
+        # definition of the playbook
         self.server.send_message({"cmd": str(CommandType.SYSTEM_INFO), "data": {}})
         self.server.send_message({"cmd": str(CommandType.DONE), "data": {}})
+        # end of the playbook definition
         if not self.playbook_done.is_set():
             if self.playbook_done.wait(timeout=Orchestrator.PLAYBOOK_TIMEOUT) is False:
                 logger.warn('agent did not respond with the done command before timeout')
@@ -158,6 +237,17 @@ class Orchestrator:
         return True
 
     def save_experience(self):
+        """Save gathered information and results of the experience to zip archive.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            none
+        """
         logger.info("saving experience")
         with open(str(self.results_dir / self.running_exp.pcap_filename), "rb") as pcap_file:
             self.running_exp.pcap_sha256_checksum = hashlib.file_digest(pcap_file, "sha256").hexdigest()
@@ -174,6 +264,17 @@ class Orchestrator:
         logger.info("successfully saved experience")
 
     def start(self):
+        """Function used to start the experience.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            none
+        """
         self.server.start(self.cmd_handler, on_connection=self.on_connect)
         for image in self.images:
             exp_id = uuid4().hex
@@ -198,6 +299,17 @@ class Orchestrator:
         self.stop()
 
     def stop(self):
+        """Function used to stop the experience.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            none
+        """
         self.server.stop()
         self.collector.stop()
         if self.agent_running:

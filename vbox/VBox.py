@@ -23,6 +23,21 @@ class VBoxManage:
     stop_cooldown = 3
 
     def __init__(self, disk_image_path, vboxm_binary_path="/usr/bin/vboxmanage", base_folder="vm"):
+        """VBoxManage constructor.
+
+        Args:
+            disk_image_path (str): path to a vm prebuilt disk image file.
+            vboxm_binary_path (str): path to the vboxmanage binary.
+            base_folder (str): path to the vm system files.
+
+        Returns:
+            none
+
+        Raises:
+            NotADirectoryError: If base_folder is not a directory.
+            FileNotFoundError: If disk_image_path is not a file or does not exist.
+            ValueError: If disk_image_path extension is not supported.
+        """
         # attributes declaration
         self.disk_image = Path(disk_image_path)
         self.vboxm_binary_path = vboxm_binary_path
@@ -48,6 +63,18 @@ class VBoxManage:
         self._test_vbox()
 
     def _test_vbox(self):
+        """Function used to test the vboxmanage binary.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            FileNotFoundError: If vboxm_binary_path does not exist.
+            SubprocessError: If vboxmanage binary test failed.
+        """
         if not os.path.isfile(self.vboxm_binary_path):
             raise FileNotFoundError(f"{self.vboxm_binary_path} binary does not exist")
         result = subprocess.run([self.vboxm_binary_path, "--version"], capture_output=True, text=True)
@@ -56,13 +83,36 @@ class VBoxManage:
         logger.info(f"vboxm version: {result.stdout}")
 
     def list_vms(self):
+        """Debug function used to print existing vms with vboxmanage.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            FileNotFoundError: If vboxm_binary_path does not exist.
+            SubprocessError: If vboxmanage binary test failed.
+        """
         result = subprocess.run([self.vboxm_binary_path, "list", "vms"], stdout=subprocess.PIPE)
         print(result.stdout)
 
     def vm_exist(self):
+        """Function used to check if the test vm exist.
+
+        Args:
+            none
+
+        Returns:
+            str | Bool : virtualbox id of the test vm if successfull, False otherwise
+
+        Raises:
+            SubprocessError: If the `list vms` command failed.
+        """
         result = subprocess.run([self.vboxm_binary_path, "list", "vms"], stdout=subprocess.PIPE)
         if result.returncode != 0:
-            logger.error(f"coudl not verify if vm {VBoxManage.vm_name} exists")
+            logger.error(f"could not verify if vm {VBoxManage.vm_name} exists")
             raise SubprocessError(result.stdout)
         match = re.search(r'"exciting_sugar" \{([a-z0-9\-]+)\}', result.stdout.decode("utf-8"))
         if match is None:
@@ -70,6 +120,18 @@ class VBoxManage:
         return match.group(1)
 
     def storage_exist(self):
+        """Function used to check if the test vm has the right storage attached.
+
+        Args:
+            none
+
+        Returns:
+            Bool : True if the storage is attached to the test vm, False otherwise.
+
+        Raises:
+            SubprocessError: If the `showvminfo` command failed.
+            ValueError: If the target vm_uuid is not defined.
+        """
         if self.vm_uuid is None:
             raise ValueError("vm_uuid is not defined")
         cmd = [
@@ -88,6 +150,17 @@ class VBoxManage:
         return False
 
     def register_vm(self):
+        """Function used to register in virtualbox a new test vm.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            SubprocessError: If the `createvm` command failed.
+        """
         self.vm_uuid = str(uuid.uuid4())
         cmd = [
             self.vboxm_binary_path,
@@ -106,6 +179,17 @@ class VBoxManage:
         logger.info(f"registered vm {self.disk_image.stem}")
 
     def create_storage(self):
+        """Function used to create a new storage the test vm.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            SubprocessError: If the `storagectl` command failed.
+        """
         if self.vm_uuid is None:
             raise ValueError("vm_uuid is not defined")
         if self.storage_exist():
@@ -130,6 +214,17 @@ class VBoxManage:
         logger.info(f"storage created for vm {self.disk_image.stem}")
 
     def attach_storage(self):
+        """Function used to attach the storage to the test vm.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            SubprocessError: If the `storageattach` command failed.
+        """
         if self.vm_uuid is None:
             raise ValueError("vm_uuid is not defined")
         cmd = [
@@ -150,6 +245,17 @@ class VBoxManage:
         logger.info(f"storage attached to vm {self.disk_image.stem}")
 
     def create_vm(self):
+        """Function used to create a new vm.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            SubprocessError: If the `modifyvm` command failed.
+        """
         # check if vm exist
         vm_uuid = self.vm_exist()
         if vm_uuid:
@@ -184,6 +290,18 @@ class VBoxManage:
         logger.info(f"successfully created vm {self.disk_image.stem} {self.vm_uuid}")
 
     def is_running(self):
+        """Function used to check if the test vm is running.
+
+        Args:
+            none
+
+        Returns:
+            Bool: True if the test vm is running, False otherwise.
+
+        Raises:
+            SubprocessError: If the `list` command failed.
+            ValueError: If the target vm_uuid is not defined.
+        """
         if self.vm_uuid is None:
             raise ValueError("vm_uuid is not defined")
         cmd = [
@@ -202,6 +320,18 @@ class VBoxManage:
         logger.info(f"successfully started vm {self.disk_image.stem}")
     
     def start_vm(self):
+        """Function used to start the test vm.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            SubprocessError: If the `startvm` command failed.
+            ValueError: If the target vm_uuid is not defined.
+        """
         if self.vm_uuid is None:
             raise ValueError("vm_uuid is not defined")
         cmd = [
@@ -217,6 +347,18 @@ class VBoxManage:
         logger.info(f"successfully started vm {self.disk_image.stem}")
 
     def stop_vm(self):
+        """Function used to stop the test vm.
+
+        Args:
+            none
+
+        Returns:
+            none
+
+        Raises:
+            SubprocessError: If the `controlvm` command failed.
+            ValueError: If the target vm_uuid is not defined.
+        """
         if self.vm_uuid is None:
             raise ValueError("vm_uuid is not defined")
         cmd = [
