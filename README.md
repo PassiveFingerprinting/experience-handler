@@ -64,3 +64,24 @@ python3 experience.py <path to your virtual image.vdi>
 `
 
 ## The result archive
+
+When the experience run is successfull, it will create a result archive.
+
+The experience archive contains these two elements:
+1. info.json
+2. \<UUIDV4\>.pcap
+
+Here is an exemple info.json file:
+
+```json
+{
+    "creation_time": "2026-04-15 08:24:33",
+    "kernel_name": "Linux",
+    "kernel_version": "#1 SMP PREEMPT_DYNAMIC Kali 6.18.5-1kali1 (2026-01-19)",
+    "kernel_release": "6.18.5+kali-amd64",
+    "pcap_filename": "461e79b33abd4ee2be39761595c626dc.pcap",
+    "pcap_sha256_checksum": "c86f2a84b4ca7a9d223329d8562b0379cf210c76d81ad1ac5e74381cb124a3e2"
+}
+```
+
+The file info.json contains all the informations about the successfull experience when the \<UUIDV4\>.pcap file contains the host/vm exchanged packets.
