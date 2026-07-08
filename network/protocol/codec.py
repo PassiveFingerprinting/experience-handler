@@ -1,7 +1,7 @@
 import json
 from .Message import Message
 
-def encode(msg: Message) -> bytes:
+def encode(msg):
     """Function used to encode a message.
 
     Args:
@@ -15,7 +15,7 @@ def encode(msg: Message) -> bytes:
     """
     return json.dumps(msg.__dict__).encode()
 
-def decode(data: bytes) -> Message:
+def decode(data):
     """Function used to decode data into a message.
 
     Args:

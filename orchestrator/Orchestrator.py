@@ -35,12 +35,12 @@ class Orchestrator:
 
     SSH_PASS = "osboxes.org"
     SSH_USER = "osboxes"
-    REMOTE_AGENT_FOLDER = "/home/osboxes/agent"
+    REMOTE_AGENT_FOLDER = "/home/osboxes/agent_bin"
     VM_IP = "192.168.100.2"
     SERVER_ADDRESS = "192.168.100.1"
     SERVER_PORT = 5573
     SSH_WAKEUP_TIMEOUT = 120 # in seconds
-    PLAYBOOK_TIMEOUT = 20 # in seconds
+    PLAYBOOK_TIMEOUT = 720 # in seconds
     INFO_JSON_FILENAME = "info.json"
     DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
@@ -67,6 +67,7 @@ class Orchestrator:
         self.agent_running = False
         self.agent = None
         self.agent_connected = False
+        self.running = False
         # running experience dataclass 
         self.running_exp = None
         self.results_dir = Path(results_dir)
@@ -107,9 +108,9 @@ class Orchestrator:
             none
         """
         logger.info(f"received command: {data}")
-        if data["cmd"] == str(CommandType.DONE):
+        if data["cmd"] == "DONE":
             self.playbook_done.set()
-        if data["cmd"] == str(CommandType.SYSTEM_INFO):
+        if data["cmd"] == "SYSTEM_INFO":
             self.running_exp.kernel_name = data["result"]["name"]
             self.running_exp.kernel_version = data["result"]["version"]
             self.running_exp.kernel_release = data["result"]["release"]
@@ -125,17 +126,22 @@ class Orchestrator:
             none
 
         Raises:
-            TimeoutError: If the remote host did not respond within timeout seconds.
+            none
         """
         logger.info("[Orchestrator]: checking if ssh port is open")
-        start_time = time.perf_counter()
-        while True:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline and self.running:
             try:
-                with socket.create_connection((Orchestrator.VM_IP, 22), timeout=1):
-                    return True
+                with socket.create_connection((Orchestrator.VM_IP, 22), timeout=2) as sock:
+                    sock.settimeout(2)
+                    banner = sock.recv(256).decode("ascii", errors="ignore")
+                    if banner.startswith("SSH-"):
+                        logger.info("[Orchestrator]: ssh service up and running")
+                        return True
             except (OSError, ConnectionRefusedError):
-                if time.perf_counter() - start_time > timeout:
-                    raise TimeoutError(f"Port {port} on {host} did not open within {timeout}s")
+                pass
+            time.sleep(0.5)
+        return False
 
     def send_agent(self):
         """Send the agent to the vm via ssh.
@@ -153,24 +159,29 @@ class Orchestrator:
         if self._ssh_is_up() is False:
             logger.error("[Orchestrator]: could not access vm ssh service")
             return False
-        logger.info("[Orchestrator]: remote ssh service is online")
-        cmd = [
-            "sshpass",
-            "-p",
-            f"{Orchestrator.SSH_PASS}",
+        subprocess.run([
+            "sshpass", 
+            "-p", 
+            Orchestrator.SSH_PASS,
+            "ssh",
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "UserKnownHostsFile=/dev/null",
+            f"{Orchestrator.SSH_USER}@{Orchestrator.VM_IP}",
+            "mkdir", 
+            "-p", 
+            Orchestrator.REMOTE_AGENT_FOLDER
+        ], check=True)
+        subprocess.run([
+            "sshpass", 
+            "-p", 
+            Orchestrator.SSH_PASS,
             "rsync",
-            "-e",
+            "-avz",
+            "-e", 
             "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
-            "--progress",
-            "-av", 
-            "--files-from=agent_files.txt",
-            ".", 
-            f"{Orchestrator.SSH_USER}@{Orchestrator.VM_IP}:{Orchestrator.REMOTE_AGENT_FOLDER}"
-        ]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if result.returncode != 0:
-            logger.error(f"could not rsync agent sources files to vm")
-            raise subprocess.SubprocessError(result.stderr)
+            "new_agent/agent",
+            f"{Orchestrator.SSH_USER}@{Orchestrator.VM_IP}:{Orchestrator.REMOTE_AGENT_FOLDER}/agent"
+        ], check=True)
         logger.info('[Orchestrator]: agent source files successfully sent')
         return True
 
@@ -196,13 +207,20 @@ class Orchestrator:
             "-o",
             "UserKnownHostsFile=/dev/null",
             f"{Orchestrator.SSH_USER}@{Orchestrator.VM_IP}",
-            f"cd {Orchestrator.REMOTE_AGENT_FOLDER}; python3 agent.py {Orchestrator.SERVER_ADDRESS} {Orchestrator.SERVER_PORT}"
+            f"cd {Orchestrator.REMOTE_AGENT_FOLDER}; chmod +x agent; ./agent {Orchestrator.SERVER_ADDRESS} {Orchestrator.SERVER_PORT} > agent_debug.logs 2>&1"
         ]
         try:
             self.agent = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         except subprocess.SubprocessError as err:
             logger.error(f'could not run cmd: {cmd}')
             raise err
+        logger.info("Waiting 1s to catch immediate failure")
+        time.sleep(1)
+        if (ret := self.agent.poll()) is not None:
+            stdout, stderr = self.agent.communicate()
+            raise RuntimeError(
+                f"SSH failed ({ret})\nstdout:\n{stdout}\nstderr:\n{stderr}"
+            )
         self.agent_running = True
         logger.info('[Orchestrator]: successfully ran agent')
         return True
@@ -223,10 +241,9 @@ class Orchestrator:
         if self.on_connect.wait(timeout=Orchestrator.PLAYBOOK_TIMEOUT) is False:
             logger.error("could run playbook because agent did not connect to server")
             return False
-        logger.info('sending INFO cmd')
         # definition of the playbook
-        self.server.send_message({"cmd": str(CommandType.SYSTEM_INFO), "data": {}})
-        self.server.send_message({"cmd": str(CommandType.DONE), "data": {}})
+        self.server.send_message({"cmd": "SYSTEM_INFO", "data": {}})
+        self.server.send_message({"cmd": "DONE", "data": {}})
         # end of the playbook definition
         if not self.playbook_done.is_set():
             if self.playbook_done.wait(timeout=Orchestrator.PLAYBOOK_TIMEOUT) is False:
@@ -234,6 +251,7 @@ class Orchestrator:
                 return False
             else:
                 logger.info('playbook done')
+        self.playbook_done.clear()
         return True
 
     def save_experience(self):
@@ -275,6 +293,7 @@ class Orchestrator:
         Raises:
             none
         """
+        self.running = True
         self.server.start(self.cmd_handler, on_connection=self.on_connect)
         for image in self.images:
             exp_id = uuid4().hex
@@ -296,6 +315,8 @@ class Orchestrator:
             self.run_agent()
             if self.run_playbook():
                 self.save_experience()
+            self.vm.stop_vm()
+            self.collector.stop()
         self.stop()
 
     def stop(self):
@@ -310,6 +331,7 @@ class Orchestrator:
         Raises:
             none
         """
+        self.running = False
         self.server.stop()
         self.collector.stop()
         if self.agent_running:

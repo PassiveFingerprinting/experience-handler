@@ -10,5 +10,4 @@ class MessageType(IntEnum):
 @dataclass
 class Message:
     type: int
-    msg_id: int
     payload: dict

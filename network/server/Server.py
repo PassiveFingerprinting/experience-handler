@@ -25,7 +25,6 @@ class Server:
         self.server = TcpServer(host, port)
         self.protocol = Protocol()
         self.run = False
-        self.msg_id = 0
         self.conn = None
         self.command_handler = None
         self.on_connection = None
@@ -44,25 +43,25 @@ class Server:
             none
         """
         self.run = True
-        self.conn = self.server.accept()
-        if self.conn is None:
-            return
-        if self.on_connection is not None:
-            self.on_connection.set()
         while self.run:
-            try:
-                data = self.conn.recv()
-            except TimeoutError:
-                break
-            except OSError:
-                break
-            if not data:
-                break
-            for msg in self.protocol.feed_data(data):
-                if msg.type == MessageType.CMD:
-                    self.command_handler(msg.payload)
-                if msg.type == MessageType.ERROR:
-                    logger.error(f"Error: {msg.msg_id}")
+            self.on_connection.clear()
+            conn = self.server.accept()
+            if conn is None:
+                continue
+            self.conn = conn
+            if self.on_connection is not None:
+                self.on_connection.set()
+                while self.run:
+                    try:
+                        data = conn.recv()
+                        if not data:
+                            logger.info("Client disconnected")
+                            break
+                        for msg in self.protocol.feed_data(data):
+                            if msg.type == MessageType.CMD:
+                                self.command_handler(msg.payload)
+                    except (TimeoutError, OSError) as err:
+                        pass
 
     def start(self, command_handler, on_connection=None):
         """Function used to start the server.
@@ -120,7 +119,6 @@ class Server:
         if self.conn is None:
             self.stop()
             raise ConnectionError("Server not connected to client")
-        msg = Message(MessageType.CMD, self.msg_id, msg)
-        self.msg_id += 1
+        msg = Message(MessageType.CMD, msg)
         self.conn.send(self.protocol.encode_message(msg))
 

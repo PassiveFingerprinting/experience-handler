@@ -6,7 +6,7 @@ This bigger project aims at creating tools to enhance OS passive fingerprinting 
 The experience-handler tool is used to retrieve pcap files from different OS for further analysis. To do so, the experience.py script load prebuild image of the desired OS into virtualbox, an ssh agent is then sent to the VM and run a playbook of commands from inside it. 
 The result pcap file is then save to a result folder.
 
-## Installing dependecies
+## Installing dependencies
 
 ***DISCLAIMER: This project was only used and tested on debian.***
 

@@ -1,10 +1,15 @@
-vm/
 .python-version
 *.pcap
 *.zip
 *.json
+*.spec
+*.o
+agent/agent
 venv/
+dist/
+build/
+vm/
 __pycache__
 .idea
-test.py
+test*.py
 results

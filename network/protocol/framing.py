@@ -1,6 +1,6 @@
 import struct
 
-def frame(data: bytes) -> bytes:
+def frame(data):
     """Function used to frame data.
 
     Args:
@@ -14,7 +14,7 @@ def frame(data: bytes) -> bytes:
     """
     return struct.pack("!I", len(data)) + data
 
-def unframe(buffer: bytearray) -> list[bytes]:
+def unframe(buffer):
     """Function used to unframe data.
 
     Args:

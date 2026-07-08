@@ -84,6 +84,5 @@ class Client:
         """
         if self.conn is None:
             raise ConnectionError("Server not connected to client")
-        msg = Message(MessageType.CMD, self.msg_id, msg)
-        self.msg_id += 1
+        msg = Message(MessageType.CMD, msg)
         self.conn.send(self.protocol.encode_message(msg))

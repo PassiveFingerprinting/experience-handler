@@ -32,7 +32,7 @@ class Protocol:
         """
         return frame(encode(msg))
 
-    def feed_data(self, data: bytes) -> list[Message]:
+    def feed_data(self, data):
         """Function used to unframe and decode data into readable Message objects.
 
         Args:

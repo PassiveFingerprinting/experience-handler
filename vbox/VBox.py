@@ -55,7 +55,6 @@ class VBoxManage:
         if self.disk_image.exists():
             if not self.disk_image.is_file():
                 raise FileNotFoundError(f"{self.disk_image} is not a file")
-            print(self.disk_image.suffix)
             if self.disk_image.suffix[1:] not in self.supported_extensions:
                 raise ValueError(f"{self.disk_image} extension is not supported, supported extensions are {self.supported_extensions}")
         else:
@@ -281,10 +280,7 @@ class VBoxManage:
             "--mouse=usb"
         ]
         logger.debug(f"create vm command: {cmd}")
-        result = subprocess.run(cmd, stdout=subprocess.PIPE)
-        if result.returncode != 0:
-            logger.error(f"could not modifyvm {self.disk_image.stem}")
-            raise SubprocessError(result.stderr)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, check=True)
         self.create_storage()
         self.attach_storage()
         logger.info(f"successfully created vm {self.disk_image.stem} {self.vm_uuid}")

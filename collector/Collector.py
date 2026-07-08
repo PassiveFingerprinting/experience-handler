@@ -116,6 +116,7 @@ class Collector:
             self.tcpdump = subprocess.Popen([
                 "sudo",
                 "/usr/bin/tcpdump",
+                "-n",
                 "-i", 
                 "tap0", 
                 "-w",
