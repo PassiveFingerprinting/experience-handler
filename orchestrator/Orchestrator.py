@@ -179,7 +179,7 @@ class Orchestrator:
             "-avz",
             "-e", 
             "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
-            "new_agent/agent",
+            "agent/agent",
             f"{Orchestrator.SSH_USER}@{Orchestrator.VM_IP}:{Orchestrator.REMOTE_AGENT_FOLDER}/agent"
         ], check=True)
         logger.info('[Orchestrator]: agent source files successfully sent')
