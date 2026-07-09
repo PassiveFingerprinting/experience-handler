@@ -8,7 +8,7 @@ TARGET := agent
 
 all: $(TARGET)
 
-$(TARGET):
+$(TARGET): $(SRC)
 	$(CC) $(CFLAGS) $(SRC) -static -o $(TARGET)
 
 debug:
@@ -18,6 +18,7 @@ strip: $(TARGET)
 	strip $(TARGET)
 
 clean:
-	rm agent
+	rm -f agent
+	rm -f src/*.o
 
-.PHONY: all clean run debug strip
+.PHONY: all clean debug strip
