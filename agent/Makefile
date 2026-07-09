@@ -1,24 +1,27 @@
 CC := musl-gcc
 
-CFLAGS := -Wall -Wextra -Wpedantic -std=c11 -Iinclude -O2
+CFLAGS := -Wall -Wextra -Wpedantic -std=c11 -Iinclude -O2 -static
 
 SRC := $(shell find src -name "*.c")
+OBJ := $(SRC:.c=.o)
 
 TARGET := agent
 
 all: $(TARGET)
 
-$(TARGET): $(SRC)
-	$(CC) $(CFLAGS) $(SRC) -static -o $(TARGET)
+$(TARGET): $(OBJ)
+	$(CC) $(OBJ) $(CFLAGS) -o $(TARGET)
 
-debug:
-	$(CC) $(CFLAGS) -g -O0 $(SRC) -static -o $(TARGET)
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+debug: CFLAGS += -g -O0
+debug: clean $(TARGET)
 
 strip: $(TARGET)
 	strip $(TARGET)
 
 clean:
-	rm -f agent
-	rm -f src/*.o
+	rm -f $(OBJ) $(TARGET)
 
 .PHONY: all clean debug strip
